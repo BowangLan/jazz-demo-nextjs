@@ -1,13 +1,14 @@
 "use client";
 
-import { DemoAuthBasicUI, JazzReactProvider } from "jazz-tools/react";
+import { JazzReactProvider } from "jazz-tools/react";
 
 import { JazzAccount } from "@/lib/jazz";
 
 const apiKey = process.env.NEXT_PUBLIC_JAZZ_API_KEY;
-const syncPeer = apiKey
-  ? (`wss://cloud.jazz.tools/?key=${apiKey}` as const)
-  : ("wss://cloud.jazz.tools" as const);
+if (!apiKey) {
+  throw new Error("NEXT_PUBLIC_JAZZ_API_KEY is not set");
+}
+const syncPeer = `wss://cloud.jazz.tools/?key=${apiKey}` as const;
 
 export function JazzAppProvider({ children }: { children: React.ReactNode }) {
   return (
@@ -16,9 +17,7 @@ export function JazzAppProvider({ children }: { children: React.ReactNode }) {
       AccountSchema={JazzAccount}
       defaultProfileName="Todo Sprinter"
     >
-      <DemoAuthBasicUI appName="Jazz Todo Sprint">
-        {children}
-      </DemoAuthBasicUI>
+      {children}
     </JazzReactProvider>
   );
 }
