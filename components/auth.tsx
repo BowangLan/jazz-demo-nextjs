@@ -1,14 +1,27 @@
 "use client";
 
-import { useIsAuthenticated, useLogOut, useAgent, useJazzContext, useAuthSecretStorage } from "jazz-tools/react-core";
+import {
+  useIsAuthenticated,
+  useLogOut,
+  useAgent,
+  useJazzContext,
+  useAuthSecretStorage,
+} from "jazz-tools/react-core";
 import { cojsonInternals } from "jazz-tools";
 import { useState, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Profile } from "jazz-tools";
 
 export function Auth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useIsAuthenticated();
@@ -22,8 +35,9 @@ export function Auth({ children }: { children: React.ReactNode }) {
   const [isSignUp, setIsSignUp] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  console.log("agent.profile", agent);
 
-  if (isAuthenticated) {
+  if (isAuthenticated && agent.$type$ === "Account") {
     return (
       <div className="min-h-screen bg-zinc-50 px-6 py-16 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
         <main className="mx-auto flex w-full max-w-6xl flex-col gap-10">
@@ -43,7 +57,9 @@ export function Auth({ children }: { children: React.ReactNode }) {
                     Signed in as
                   </p>
                   <p className="font-medium">
-                    {agent.$isLoaded ? agent.profile?.name || "Anonymous" : "Loading..."}
+                    {agent.$isLoaded
+                      ? (agent.profile as Profile).name || "Anonymous"
+                      : "Loading..."}
                   </p>
                 </div>
                 <Button variant="outline" onClick={logOut}>
@@ -60,13 +76,27 @@ export function Auth({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     );
+  } else if (isAuthenticated && agent.$type$ !== "Anonymous") {
+    // anonymous agent
+    return (
+      <div className="min-h-screen bg-zinc-50 px-6 py-16 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
+        <main className="mx-auto flex w-full max-w-6xl flex-col gap-10">
+          <section className="flex flex-col gap-3">
+            <p>Anonymous agent</p>
+          </section>
+        </main>
+      </div>
+    );
   }
 
   // Create a deterministic secret from username/password
-  const createSecretFromCredentials = async (username: string, password: string) => {
+  const createSecretFromCredentials = async (
+    username: string,
+    password: string
+  ) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(`${username}:${password}`);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = new Uint8Array(hashBuffer);
     // Take first 32 bytes as seed (256 bits)
     return hashArray.slice(0, 32);
@@ -83,12 +113,16 @@ export function Auth({ children }: { children: React.ReactNode }) {
 
       // Generate account secret from username/password
       const secretSeed = await createSecretFromCredentials(username, password);
-      const accountSecret = context.node.crypto.agentSecretFromSecretSeed(secretSeed);
+      const accountSecret =
+        context.node.crypto.agentSecretFromSecretSeed(secretSeed);
 
       // Calculate account ID from account secret (deterministic)
       const accountID = cojsonInternals.idforHeader(
-        cojsonInternals.accountHeaderForInitialAgentSecret(accountSecret, context.node.crypto),
-        context.node.crypto,
+        cojsonInternals.accountHeaderForInitialAgentSecret(
+          accountSecret,
+          context.node.crypto
+        ),
+        context.node.crypto
       ) as any;
 
       // Try to register the account (this will fail if it already exists)
@@ -103,7 +137,9 @@ export function Auth({ children }: { children: React.ReactNode }) {
             accountSecret,
           });
         } catch (authError) {
-          throw new Error("Account already exists with different credentials or registration failed");
+          throw new Error(
+            "Account already exists with different credentials or registration failed"
+          );
         }
       }
 
@@ -120,7 +156,6 @@ export function Auth({ children }: { children: React.ReactNode }) {
         accountID,
         accountSecret,
       });
-
     } catch (err) {
       handleError(err as Error);
     }
@@ -137,12 +172,16 @@ export function Auth({ children }: { children: React.ReactNode }) {
 
       // Generate account secret from username/password
       const secretSeed = await createSecretFromCredentials(username, password);
-      const accountSecret = context.node.crypto.agentSecretFromSecretSeed(secretSeed);
+      const accountSecret =
+        context.node.crypto.agentSecretFromSecretSeed(secretSeed);
 
       // Calculate account ID from account secret
       const accountID = cojsonInternals.idforHeader(
-        cojsonInternals.accountHeaderForInitialAgentSecret(accountSecret, context.node.crypto),
-        context.node.crypto,
+        cojsonInternals.accountHeaderForInitialAgentSecret(
+          accountSecret,
+          context.node.crypto
+        ),
+        context.node.crypto
       ) as any;
 
       // Try to authenticate
@@ -158,10 +197,11 @@ export function Auth({ children }: { children: React.ReactNode }) {
         accountSecret,
         provider: "username-password",
       });
-
     } catch (err) {
       // If authentication fails, it might be because the account doesn't exist
-      setError("Invalid username or password, or account doesn't exist. Please sign up first.");
+      setError(
+        "Invalid username or password, or account doesn't exist. Please sign up first."
+      );
     }
   };
 
@@ -195,8 +235,7 @@ export function Auth({ children }: { children: React.ReactNode }) {
               <CardDescription>
                 {isSignUp
                   ? "Create a new account to get started"
-                  : "Sign in to your existing account"
-                }
+                  : "Sign in to your existing account"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -236,7 +275,9 @@ export function Auth({ children }: { children: React.ReactNode }) {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete={isSignUp ? "new-password" : "current-password"}
+                    autoComplete={
+                      isSignUp ? "new-password" : "current-password"
+                    }
                     required
                   />
                 </div>
@@ -251,7 +292,9 @@ export function Auth({ children }: { children: React.ReactNode }) {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                   <span className="bg-background px-2 text-muted-foreground">
-                    {isSignUp ? "Already have an account?" : "Don't have an account?"}
+                    {isSignUp
+                      ? "Already have an account?"
+                      : "Don't have an account?"}
                   </span>
                 </div>
               </div>
